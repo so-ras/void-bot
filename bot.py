@@ -17,7 +17,7 @@ from modules.subscription import SubscriptionModule
 from modules.logger import LoggerModule
 from database.db_manager import DBManager
 from database.redis_manager import RedisManager
-from utils.helpers import is_admin, is_owner
+from utils.helpers import is_admin
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,7 +28,6 @@ class VoidBot:
         self.redis = RedisManager()
         self.app = Application.builder().token(BOT_TOKEN).build()
         
-        # ماژول‌ها
         self.admin = AdminModule(self.db, self.redis)
         self.promote = PromoteModule(self.db, self.redis)
         self.locks = LocksModule(self.db, self.redis)
@@ -50,7 +49,6 @@ class VoidBot:
         self.app.add_handler(CommandHandler("ban", self.admin.ban_user))
         self.app.add_handler(CommandHandler("sic", self.admin.sic_user))
         self.app.add_handler(CommandHandler("mute", self.admin.mute_user))
-        self.app.add_handler(CommandHandler("mute1", self.admin.mute_1h))
         self.app.add_handler(CommandHandler("unmute", self.admin.unmute_user))
         self.app.add_handler(CommandHandler("warn", self.admin.warn_user))
         self.app.add_handler(CommandHandler("unwarn", self.admin.unwarn_user))
@@ -63,7 +61,6 @@ class VoidBot:
         self.app.add_handler(CommandHandler("promote", self.promote.promote_user))
         self.app.add_handler(CommandHandler("demote", self.promote.demote_user))
         self.app.add_handler(CommandHandler("vip", self.promote.set_vip))
-        self.app.add_handler(CommandHandler("vip1", self.promote.set_vip_1h))
         self.app.add_handler(CommandHandler("unvip", self.promote.unset_vip))
         self.app.add_handler(CommandHandler("promoteowner", self.promote.promote_owner))
         
@@ -72,28 +69,6 @@ class VoidBot:
         self.app.add_handler(CommandHandler("unlock", self.locks.unlock_group))
         self.app.add_handler(CommandHandler("locklink", self.locks.lock_link))
         self.app.add_handler(CommandHandler("unlocklink", self.locks.unlock_link))
-        self.app.add_handler(CommandHandler("lockphoto", self.locks.lock_photo))
-        self.app.add_handler(CommandHandler("unlockphoto", self.locks.unlock_photo))
-        self.app.add_handler(CommandHandler("lockvideo", self.locks.lock_video))
-        self.app.add_handler(CommandHandler("unlockvideo", self.locks.unlock_video))
-        self.app.add_handler(CommandHandler("lockfile", self.locks.lock_file))
-        self.app.add_handler(CommandHandler("unlockfile", self.locks.unlock_file))
-        self.app.add_handler(CommandHandler("locksticker", self.locks.lock_sticker))
-        self.app.add_handler(CommandHandler("unlocksticker", self.locks.unlock_sticker))
-        self.app.add_handler(CommandHandler("lockvoice", self.locks.lock_voice))
-        self.app.add_handler(CommandHandler("unlockvoice", self.locks.unlock_voice))
-        self.app.add_handler(CommandHandler("lockmusic", self.locks.lock_music))
-        self.app.add_handler(CommandHandler("unlockmusic", self.locks.unlock_music))
-        self.app.add_handler(CommandHandler("lockgif", self.locks.lock_gif))
-        self.app.add_handler(CommandHandler("unlockgif", self.locks.unlock_gif))
-        self.app.add_handler(CommandHandler("lockspam", self.locks.lock_spam))
-        self.app.add_handler(CommandHandler("unlockspam", self.locks.unlock_spam))
-        self.app.add_handler(CommandHandler("locklocation", self.locks.lock_location))
-        self.app.add_handler(CommandHandler("unlocklocation", self.locks.unlock_location))
-        self.app.add_handler(CommandHandler("lockcontact", self.locks.lock_contact))
-        self.app.add_handler(CommandHandler("unlockcontact", self.locks.unlock_contact))
-        self.app.add_handler(CommandHandler("lockvideonote", self.locks.lock_video_note))
-        self.app.add_handler(CommandHandler("unlockvideonote", self.locks.unlock_video_note))
         
         # فیلترها
         self.app.add_handler(CommandHandler("filter", self.filters.add_filter))
@@ -105,7 +80,7 @@ class VoidBot:
         self.app.add_handler(CommandHandler("welcome", self.welcome.show_welcome))
         self.app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.welcome.auto_welcome))
         
-        # آمار و اطلاعات
+        # آمار
         self.app.add_handler(CommandHandler("stats", self.stats.show_stats))
         self.app.add_handler(CommandHandler("info", self.stats.user_info))
         

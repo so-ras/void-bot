@@ -1,7 +1,6 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackQueryHandler, CallbackContext
-from telegram.ext import filters
+from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackQueryHandler, Filters, CallbackContext
 from config import BOT_TOKEN, OWNER_ID
 from modules.admin import AdminModule
 from modules.promote import PromoteModule
@@ -71,28 +70,6 @@ class VoidBot:
         self.dispatcher.add_handler(CommandHandler("unlock", self.locks.unlock_group))
         self.dispatcher.add_handler(CommandHandler("locklink", self.locks.lock_link))
         self.dispatcher.add_handler(CommandHandler("unlocklink", self.locks.unlock_link))
-        self.dispatcher.add_handler(CommandHandler("lockphoto", self.locks.lock_photo))
-        self.dispatcher.add_handler(CommandHandler("unlockphoto", self.locks.unlock_photo))
-        self.dispatcher.add_handler(CommandHandler("lockvideo", self.locks.lock_video))
-        self.dispatcher.add_handler(CommandHandler("unlockvideo", self.locks.unlock_video))
-        self.dispatcher.add_handler(CommandHandler("lockfile", self.locks.lock_file))
-        self.dispatcher.add_handler(CommandHandler("unlockfile", self.locks.unlock_file))
-        self.dispatcher.add_handler(CommandHandler("locksticker", self.locks.lock_sticker))
-        self.dispatcher.add_handler(CommandHandler("unlocksticker", self.locks.unlock_sticker))
-        self.dispatcher.add_handler(CommandHandler("lockvoice", self.locks.lock_voice))
-        self.dispatcher.add_handler(CommandHandler("unlockvoice", self.locks.unlock_voice))
-        self.dispatcher.add_handler(CommandHandler("lockmusic", self.locks.lock_music))
-        self.dispatcher.add_handler(CommandHandler("unlockmusic", self.locks.unlock_music))
-        self.dispatcher.add_handler(CommandHandler("lockgif", self.locks.lock_gif))
-        self.dispatcher.add_handler(CommandHandler("unlockgif", self.locks.unlock_gif))
-        self.dispatcher.add_handler(CommandHandler("lockspam", self.locks.lock_spam))
-        self.dispatcher.add_handler(CommandHandler("unlockspam", self.locks.unlock_spam))
-        self.dispatcher.add_handler(CommandHandler("locklocation", self.locks.lock_location))
-        self.dispatcher.add_handler(CommandHandler("unlocklocation", self.locks.unlock_location))
-        self.dispatcher.add_handler(CommandHandler("lockcontact", self.locks.lock_contact))
-        self.dispatcher.add_handler(CommandHandler("unlockcontact", self.locks.unlock_contact))
-        self.dispatcher.add_handler(CommandHandler("lockvideonote", self.locks.lock_video_note))
-        self.dispatcher.add_handler(CommandHandler("unlockvideonote", self.locks.unlock_video_note))
         
         # فیلترها
         self.dispatcher.add_handler(CommandHandler("filter", self.filters.add_filter))
@@ -102,7 +79,7 @@ class VoidBot:
         # خوش‌آمد
         self.dispatcher.add_handler(CommandHandler("setwelcome", self.welcome.set_welcome))
         self.dispatcher.add_handler(CommandHandler("welcome", self.welcome.show_welcome))
-        self.dispatcher.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.welcome.auto_welcome))
+        self.dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, self.welcome.auto_welcome))
         
         # آمار
         self.dispatcher.add_handler(CommandHandler("stats", self.stats.show_stats))
@@ -146,7 +123,7 @@ class VoidBot:
         self.dispatcher.add_handler(CallbackQueryHandler(self.button_handler))
         
         # هندلر پیام‌ها
-        self.dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.message_handler))
+        self.dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, self.message_handler))
     
     def settings_panel(self, update: Update, context: CallbackContext):
         if not is_admin(update, context):

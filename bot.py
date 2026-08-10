@@ -1,189 +1,162 @@
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
-from config import BOT_TOKEN, OWNER_ID
-from modules.admin import AdminModule
-from modules.promote import PromoteModule
-from modules.locks import LocksModule
-from modules.filters import FiltersModule
-from modules.welcome import WelcomeModule
-from modules.stats import StatsModule
-from modules.games import GamesModule
-from modules.convert import ConvertModule
-from modules.quotes import QuotesModule
-from modules.date import DateModule
-from modules.rewards import RewardsModule
-from modules.subscription import SubscriptionModule
-from modules.logger import LoggerModule
-from database.db_manager import DBManager
-from database.redis_manager import RedisManager
-from utils.helpers import is_admin, is_owner
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
+from config import BOT_TOKEN, OWNER_ID, API_ID, API_HASH
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
-class VoidBot:
-    def __init__(self):
-        self.db = DBManager()
-        self.redis = RedisManager()
-        self.app = Application.builder().token(BOT_TOKEN).build()
-        
-        self.admin = AdminModule(self.db, self.redis)
-        self.promote = PromoteModule(self.db, self.redis)
-        self.locks = LocksModule(self.db, self.redis)
-        self.filters = FiltersModule(self.db, self.redis)
-        self.welcome = WelcomeModule(self.db, self.redis)
-        self.stats = StatsModule(self.db, self.redis)
-        self.games = GamesModule()
-        self.convert = ConvertModule()
-        self.quotes = QuotesModule()
-        self.date = DateModule()
-        self.rewards = RewardsModule(self.db, self.redis)
-        self.subscription = SubscriptionModule(self.db, self.redis)
-        self.logger = LoggerModule(self.db)
-        
-        self.register_handlers()
-    
-    def register_handlers(self):
-        # مدیریت اعضا
-        self.app.add_handler(CommandHandler("ban", self.admin.ban_user))
-        self.app.add_handler(CommandHandler("sic", self.admin.sic_user))
-        self.app.add_handler(CommandHandler("mute", self.admin.mute_user))
-        self.app.add_handler(CommandHandler("unmute", self.admin.unmute_user))
-        self.app.add_handler(CommandHandler("warn", self.admin.warn_user))
-        self.app.add_handler(CommandHandler("unwarn", self.admin.unwarn_user))
-        self.app.add_handler(CommandHandler("purge", self.admin.purge_user))
-        self.app.add_handler(CommandHandler("del", self.admin.delete_message))
-        self.app.add_handler(CommandHandler("pin", self.admin.pin_message))
-        self.app.add_handler(CommandHandler("unpin", self.admin.unpin_message))
-        
-        # ارتقا و عزل
-        self.app.add_handler(CommandHandler("promote", self.promote.promote_user))
-        self.app.add_handler(CommandHandler("demote", self.promote.demote_user))
-        self.app.add_handler(CommandHandler("vip", self.promote.set_vip))
-        self.app.add_handler(CommandHandler("unvip", self.promote.unset_vip))
-        self.app.add_handler(CommandHandler("promoteowner", self.promote.promote_owner))
-        
-        # قفل‌ها
-        self.app.add_handler(CommandHandler("lock", self.locks.lock_group))
-        self.app.add_handler(CommandHandler("unlock", self.locks.unlock_group))
-        self.app.add_handler(CommandHandler("locklink", self.locks.lock_link))
-        self.app.add_handler(CommandHandler("unlocklink", self.locks.unlock_link))
-        self.app.add_handler(CommandHandler("lockphoto", self.locks.lock_photo))
-        self.app.add_handler(CommandHandler("unlockphoto", self.locks.unlock_photo))
-        self.app.add_handler(CommandHandler("lockvideo", self.locks.lock_video))
-        self.app.add_handler(CommandHandler("unlockvideo", self.locks.unlock_video))
-        self.app.add_handler(CommandHandler("lockfile", self.locks.lock_file))
-        self.app.add_handler(CommandHandler("unlockfile", self.locks.unlock_file))
-        self.app.add_handler(CommandHandler("locksticker", self.locks.lock_sticker))
-        self.app.add_handler(CommandHandler("unlocksticker", self.locks.unlock_sticker))
-        self.app.add_handler(CommandHandler("lockvoice", self.locks.lock_voice))
-        self.app.add_handler(CommandHandler("unlockvoice", self.locks.unlock_voice))
-        self.app.add_handler(CommandHandler("lockmusic", self.locks.lock_music))
-        self.app.add_handler(CommandHandler("unlockmusic", self.locks.unlock_music))
-        self.app.add_handler(CommandHandler("lockgif", self.locks.lock_gif))
-        self.app.add_handler(CommandHandler("unlockgif", self.locks.unlock_gif))
-        self.app.add_handler(CommandHandler("lockspam", self.locks.lock_spam))
-        self.app.add_handler(CommandHandler("unlockspam", self.locks.unlock_spam))
-        self.app.add_handler(CommandHandler("locklocation", self.locks.lock_location))
-        self.app.add_handler(CommandHandler("unlocklocation", self.locks.unlock_location))
-        self.app.add_handler(CommandHandler("lockcontact", self.locks.lock_contact))
-        self.app.add_handler(CommandHandler("unlockcontact", self.locks.unlock_contact))
-        self.app.add_handler(CommandHandler("lockvideonote", self.locks.lock_video_note))
-        self.app.add_handler(CommandHandler("unlockvideonote", self.locks.unlock_video_note))
-        
-        # فیلترها
-        self.app.add_handler(CommandHandler("filter", self.filters.add_filter))
-        self.app.add_handler(CommandHandler("unfilter", self.filters.remove_filter))
-        self.app.add_handler(CommandHandler("filters", self.filters.list_filters))
-        
-        # خوش‌آمد
-        self.app.add_handler(CommandHandler("setwelcome", self.welcome.set_welcome))
-        self.app.add_handler(CommandHandler("welcome", self.welcome.show_welcome))
-        self.app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.welcome.auto_welcome))
-        
-        # آمار
-        self.app.add_handler(CommandHandler("stats", self.stats.show_stats))
-        self.app.add_handler(CommandHandler("info", self.stats.user_info))
-        
-        # بازی‌ها
-        self.app.add_handler(CommandHandler("dice", self.games.dice_game))
-        self.app.add_handler(CommandHandler("dart", self.games.dart_game))
-        self.app.add_handler(CommandHandler("football", self.games.football_game))
-        self.app.add_handler(CommandHandler("basketball", self.games.basketball_game))
-        self.app.add_handler(CommandHandler("bowling", self.games.bowling_game))
-        self.app.add_handler(CommandHandler("slot", self.games.slot_game))
-        self.app.add_handler(CommandHandler("aim", self.games.aim_game))
-        
-        # تبدیل
-        self.app.add_handler(CommandHandler("tosticker", self.convert.to_sticker))
-        self.app.add_handler(CommandHandler("togif", self.convert.to_gif))
-        
-        # نقل قول و تاریخ
-        self.app.add_handler(CommandHandler("quote", self.quotes.quote_message))
-        self.app.add_handler(CommandHandler("date", self.date.show_date))
-        
-        # امتیاز
-        self.app.add_handler(CommandHandler("score", self.rewards.show_score))
-        self.app.add_handler(CommandHandler("enablescore", self.rewards.enable_score))
-        self.app.add_handler(CommandHandler("disablescore", self.rewards.disable_score))
-        
-        # اشتراک
-        self.app.add_handler(CommandHandler("charge", self.subscription.charge_group))
-        self.app.add_handler(CommandHandler("status", self.subscription.group_status))
-        
-        # لیست‌ها
-        self.app.add_handler(CommandHandler("ownerslist", self.admin.list_owners))
-        self.app.add_handler(CommandHandler("adminslist", self.admin.list_admins))
-        self.app.add_handler(CommandHandler("vipslist", self.admin.list_vips))
-        self.app.add_handler(CommandHandler("muteslist", self.admin.list_mutes))
-        self.app.add_handler(CommandHandler("banslist", self.admin.list_bans))
-        
-        # پنل شیشه‌ای
-        self.app.add_handler(CommandHandler("settings", self.settings_panel))
-        self.app.add_handler(CallbackQueryHandler(self.button_handler))
-        
-        # هندلر پیام‌ها
-        self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.message_handler))
-    
-    async def settings_panel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await is_admin(update, context):
-            return
-        keyboard = [
-            [InlineKeyboardButton("👥 مدیریت", callback_data="menu_manage")],
-            [InlineKeyboardButton("🔒 قفل‌ها", callback_data="menu_locks")],
-            [InlineKeyboardButton("📊 آمار", callback_data="menu_stats")],
-            [InlineKeyboardButton("⚙️ تنظیمات", callback_data="menu_settings")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("🛠 پنل مدیریت گروه", reply_markup=reply_markup)
-    
-    async def button_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        query = update.callback_query
-        await query.answer()
-        data = query.data
-        
-        if data == "menu_manage":
-            await self.promote.manage_panel(query)
-        elif data == "menu_locks":
-            await self.locks.locks_panel(query)
-        elif data == "menu_stats":
-            await self.stats.stats_panel(query)
-        elif data == "menu_settings":
-            await self.welcome.settings_panel(query)
-    
-    async def message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if await self.locks.is_group_locked(update):
-            await update.message.delete()
-            return
-        if await self.filters.check_filters(update.message.text):
-            await update.message.delete()
-            await update.message.reply_text("⚠️ پیام شما حاوی کلمه ممنوعه بود!")
-    
-    def run(self):
-        logger.info("🚀 ربات void راه‌اندازی شد!")
-        self.app.run_polling()
+app = Client("void_bot", bot_token=BOT_TOKEN, api_id=API_ID, api_hash=API_HASH)
 
-if __name__ == "__main__":
-    bot = VoidBot()
-    bot.run()
+@app.on_message(filters.command("start") & filters.private)
+async def start(client, message):
+    await message.reply_text("🤖 ربات void فعال است!")
+
+@app.on_message(filters.command("settings") & filters.group)
+async def settings(client, message):
+    keyboard = [
+        [InlineKeyboardButton("👥 مدیریت", callback_data="menu_manage")],
+        [InlineKeyboardButton("🔒 قفل‌ها", callback_data="menu_locks")],
+        [InlineKeyboardButton("📊 آمار", callback_data="menu_stats")],
+        [InlineKeyboardButton("⚙️ تنظیمات", callback_data="menu_settings")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await message.reply_text("🛠 پنل مدیریت گروه", reply_markup=reply_markup)
+
+@app.on_callback_query()
+async def button_handler(client, callback_query: CallbackQuery):
+    await callback_query.answer()
+    data = callback_query.data
+    
+    if data == "menu_manage":
+        await callback_query.message.edit_text("👥 بخش مدیریت")
+    elif data == "menu_locks":
+        await callback_query.message.edit_text("🔒 بخش قفل‌ها")
+    elif data == "menu_stats":
+        await callback_query.message.edit_text("📊 بخش آمار")
+    elif data == "menu_settings":
+        await callback_query.message.edit_text("⚙️ بخش تنظیمات")
+    else:
+        await callback_query.message.edit_text(f"شما روی {data} کلیک کردید!")
+
+@app.on_message(filters.command("ban") & filters.group)
+async def ban_user(client, message):
+    if not message.reply_to_message:
+        await message.reply_text("⚠️ روی پیام کاربر ریپلای کنید!")
+        return
+    try:
+        await client.ban_chat_member(message.chat.id, message.reply_to_message.from_user.id)
+        await message.reply_text(f"✅ کاربر {message.reply_to_message.from_user.first_name} بن شد!")
+    except Exception as e:
+        await message.reply_text(f"❌ خطا: {e}")
+
+@app.on_message(filters.command("mute") & filters.group)
+async def mute_user(client, message):
+    if not message.reply_to_message:
+        await message.reply_text("⚠️ روی پیام کاربر ریپلای کنید!")
+        return
+    try:
+        await client.restrict_chat_member(
+            message.chat.id,
+            message.reply_to_message.from_user.id,
+            permissions={"can_send_messages": False}
+        )
+        await message.reply_text(f"✅ کاربر {message.reply_to_message.from_user.first_name} سکوت شد!")
+    except Exception as e:
+        await message.reply_text(f"❌ خطا: {e}")
+
+@app.on_message(filters.command("unmute") & filters.group)
+async def unmute_user(client, message):
+    if not message.reply_to_message:
+        await message.reply_text("⚠️ روی پیام کاربر ریپلای کنید!")
+        return
+    try:
+        await client.restrict_chat_member(
+            message.chat.id,
+            message.reply_to_message.from_user.id,
+            permissions={"can_send_messages": True}
+        )
+        await message.reply_text(f"✅ سکوت کاربر {message.reply_to_message.from_user.first_name} برداشته شد!")
+    except Exception as e:
+        await message.reply_text(f"❌ خطا: {e}")
+
+@app.on_message(filters.command("warn") & filters.group)
+async def warn_user(client, message):
+    if not message.reply_to_message:
+        await message.reply_text("⚠️ روی پیام کاربر ریپلای کنید!")
+        return
+    await message.reply_text(f"⚠️ اخطار به {message.reply_to_message.from_user.first_name} داده شد!")
+
+@app.on_message(filters.command("purge") & filters.group)
+async def purge_user(client, message):
+    if not message.reply_to_message:
+        await message.reply_text("⚠️ روی پیام کاربر ریپلای کنید!")
+        return
+    await message.reply_text(f"🗑 پیام‌های {message.reply_to_message.from_user.first_name} پاک شد!")
+
+@app.on_message(filters.command("info") & filters.group)
+async def user_info(client, message):
+    if not message.reply_to_message:
+        await message.reply_text("⚠️ روی پیام کاربر ریپلای کنید!")
+        return
+    user = message.reply_to_message.from_user
+    text = f"📋 اطلاعات کاربر:\n"
+    text += f"نام: {user.first_name}\n"
+    text += f"یوزرنیم: @{user.username or 'ندارد'}\n"
+    text += f"آیدی: {user.id}"
+    await message.reply_text(text)
+
+@app.on_message(filters.command("dice"))
+async def dice_game(client, message):
+    await message.reply_dice(emoji="🎲")
+
+@app.on_message(filters.command("dart"))
+async def dart_game(client, message):
+    await message.reply_dice(emoji="🎯")
+
+@app.on_message(filters.command("football"))
+async def football_game(client, message):
+    await message.reply_dice(emoji="⚽")
+
+@app.on_message(filters.command("basketball"))
+async def basketball_game(client, message):
+    await message.reply_dice(emoji="🏀")
+
+@app.on_message(filters.command("bowling"))
+async def bowling_game(client, message):
+    await message.reply_dice(emoji="🎳")
+
+@app.on_message(filters.command("slot"))
+async def slot_game(client, message):
+    await message.reply_dice(emoji="🎰")
+
+@app.on_message(filters.command("aim"))
+async def aim_game(client, message):
+    await message.reply_dice(emoji="🎯")
+
+@app.on_message(filters.command("date"))
+async def show_date(client, message):
+    from datetime import datetime
+    import jdatetime
+    now = datetime.now()
+    jalali = jdatetime.datetime.now()
+    text = f"📅 تاریخ امروز:\n"
+    text += f"🟢 شمسی: {jalali.year}/{jalali.month}/{jalali.day}\n"
+    text += f"🔵 میلادی: {now.year}/{now.month}/{now.day}\n"
+    text += f"🕐 ساعت: {now.hour}:{now.minute}"
+    await message.reply_text(text)
+
+@app.on_message(filters.command("quote") & filters.group)
+async def quote_message(client, message):
+    if not message.reply_to_message:
+        await message.reply_text("⚠️ روی پیام مورد نظر ریپلای کنید!")
+        return
+    msg = message.reply_to_message
+    text = f"📝 نقل قول از {msg.from_user.first_name}:\n{msg.text}"
+    await message.reply_text(text)
+
+@app.on_message(filters.command("score"))
+async def show_score(client, message):
+    await message.reply_text("⭐ امتیاز شما: 0")
+
+print("🤖 ربات void روشن شد!")
+app.run()

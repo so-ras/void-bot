@@ -5,7 +5,7 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8882672601:AAGJos3r1VJPYKiJuoPL9RW5kR3O92iezpA")
 OWNER_ID = int(os.getenv("OWNER_ID", 1391789851))
 
-# اینا رو از my.telegram.org بگیر
+# از my.telegram.org بگیر
 API_ID = 31421832
 API_HASH = "8c212c014c85ea497cc5d7dac6b2e6cb"
 

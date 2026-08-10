@@ -1,6 +1,6 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackQueryHandler, Filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 from config import BOT_TOKEN, OWNER_ID
 from modules.admin import AdminModule
 from modules.promote import PromoteModule
@@ -17,7 +17,7 @@ from modules.subscription import SubscriptionModule
 from modules.logger import LoggerModule
 from database.db_manager import DBManager
 from database.redis_manager import RedisManager
-from utils.helpers import is_admin
+from utils.helpers import is_admin, is_owner
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,8 +26,7 @@ class VoidBot:
     def __init__(self):
         self.db = DBManager()
         self.redis = RedisManager()
-        self.updater = Updater(BOT_TOKEN)
-        self.dispatcher = self.updater.dispatcher
+        self.app = Application.builder().token(BOT_TOKEN).build()
         
         self.admin = AdminModule(self.db, self.redis)
         self.promote = PromoteModule(self.db, self.redis)
@@ -47,86 +46,108 @@ class VoidBot:
     
     def register_handlers(self):
         # مدیریت اعضا
-        self.dispatcher.add_handler(CommandHandler("ban", self.admin.ban_user))
-        self.dispatcher.add_handler(CommandHandler("sic", self.admin.sic_user))
-        self.dispatcher.add_handler(CommandHandler("mute", self.admin.mute_user))
-        self.dispatcher.add_handler(CommandHandler("unmute", self.admin.unmute_user))
-        self.dispatcher.add_handler(CommandHandler("warn", self.admin.warn_user))
-        self.dispatcher.add_handler(CommandHandler("unwarn", self.admin.unwarn_user))
-        self.dispatcher.add_handler(CommandHandler("purge", self.admin.purge_user))
-        self.dispatcher.add_handler(CommandHandler("del", self.admin.delete_message))
-        self.dispatcher.add_handler(CommandHandler("pin", self.admin.pin_message))
-        self.dispatcher.add_handler(CommandHandler("unpin", self.admin.unpin_message))
+        self.app.add_handler(CommandHandler("ban", self.admin.ban_user))
+        self.app.add_handler(CommandHandler("sic", self.admin.sic_user))
+        self.app.add_handler(CommandHandler("mute", self.admin.mute_user))
+        self.app.add_handler(CommandHandler("unmute", self.admin.unmute_user))
+        self.app.add_handler(CommandHandler("warn", self.admin.warn_user))
+        self.app.add_handler(CommandHandler("unwarn", self.admin.unwarn_user))
+        self.app.add_handler(CommandHandler("purge", self.admin.purge_user))
+        self.app.add_handler(CommandHandler("del", self.admin.delete_message))
+        self.app.add_handler(CommandHandler("pin", self.admin.pin_message))
+        self.app.add_handler(CommandHandler("unpin", self.admin.unpin_message))
         
         # ارتقا و عزل
-        self.dispatcher.add_handler(CommandHandler("promote", self.promote.promote_user))
-        self.dispatcher.add_handler(CommandHandler("demote", self.promote.demote_user))
-        self.dispatcher.add_handler(CommandHandler("vip", self.promote.set_vip))
-        self.dispatcher.add_handler(CommandHandler("unvip", self.promote.unset_vip))
-        self.dispatcher.add_handler(CommandHandler("promoteowner", self.promote.promote_owner))
+        self.app.add_handler(CommandHandler("promote", self.promote.promote_user))
+        self.app.add_handler(CommandHandler("demote", self.promote.demote_user))
+        self.app.add_handler(CommandHandler("vip", self.promote.set_vip))
+        self.app.add_handler(CommandHandler("unvip", self.promote.unset_vip))
+        self.app.add_handler(CommandHandler("promoteowner", self.promote.promote_owner))
         
         # قفل‌ها
-        self.dispatcher.add_handler(CommandHandler("lock", self.locks.lock_group))
-        self.dispatcher.add_handler(CommandHandler("unlock", self.locks.unlock_group))
-        self.dispatcher.add_handler(CommandHandler("locklink", self.locks.lock_link))
-        self.dispatcher.add_handler(CommandHandler("unlocklink", self.locks.unlock_link))
+        self.app.add_handler(CommandHandler("lock", self.locks.lock_group))
+        self.app.add_handler(CommandHandler("unlock", self.locks.unlock_group))
+        self.app.add_handler(CommandHandler("locklink", self.locks.lock_link))
+        self.app.add_handler(CommandHandler("unlocklink", self.locks.unlock_link))
+        self.app.add_handler(CommandHandler("lockphoto", self.locks.lock_photo))
+        self.app.add_handler(CommandHandler("unlockphoto", self.locks.unlock_photo))
+        self.app.add_handler(CommandHandler("lockvideo", self.locks.lock_video))
+        self.app.add_handler(CommandHandler("unlockvideo", self.locks.unlock_video))
+        self.app.add_handler(CommandHandler("lockfile", self.locks.lock_file))
+        self.app.add_handler(CommandHandler("unlockfile", self.locks.unlock_file))
+        self.app.add_handler(CommandHandler("locksticker", self.locks.lock_sticker))
+        self.app.add_handler(CommandHandler("unlocksticker", self.locks.unlock_sticker))
+        self.app.add_handler(CommandHandler("lockvoice", self.locks.lock_voice))
+        self.app.add_handler(CommandHandler("unlockvoice", self.locks.unlock_voice))
+        self.app.add_handler(CommandHandler("lockmusic", self.locks.lock_music))
+        self.app.add_handler(CommandHandler("unlockmusic", self.locks.unlock_music))
+        self.app.add_handler(CommandHandler("lockgif", self.locks.lock_gif))
+        self.app.add_handler(CommandHandler("unlockgif", self.locks.unlock_gif))
+        self.app.add_handler(CommandHandler("lockspam", self.locks.lock_spam))
+        self.app.add_handler(CommandHandler("unlockspam", self.locks.unlock_spam))
+        self.app.add_handler(CommandHandler("locklocation", self.locks.lock_location))
+        self.app.add_handler(CommandHandler("unlocklocation", self.locks.unlock_location))
+        self.app.add_handler(CommandHandler("lockcontact", self.locks.lock_contact))
+        self.app.add_handler(CommandHandler("unlockcontact", self.locks.unlock_contact))
+        self.app.add_handler(CommandHandler("lockvideonote", self.locks.lock_video_note))
+        self.app.add_handler(CommandHandler("unlockvideonote", self.locks.unlock_video_note))
         
         # فیلترها
-        self.dispatcher.add_handler(CommandHandler("filter", self.filters.add_filter))
-        self.dispatcher.add_handler(CommandHandler("unfilter", self.filters.remove_filter))
-        self.dispatcher.add_handler(CommandHandler("filters", self.filters.list_filters))
+        self.app.add_handler(CommandHandler("filter", self.filters.add_filter))
+        self.app.add_handler(CommandHandler("unfilter", self.filters.remove_filter))
+        self.app.add_handler(CommandHandler("filters", self.filters.list_filters))
         
         # خوش‌آمد
-        self.dispatcher.add_handler(CommandHandler("setwelcome", self.welcome.set_welcome))
-        self.dispatcher.add_handler(CommandHandler("welcome", self.welcome.show_welcome))
-        self.dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, self.welcome.auto_welcome))
+        self.app.add_handler(CommandHandler("setwelcome", self.welcome.set_welcome))
+        self.app.add_handler(CommandHandler("welcome", self.welcome.show_welcome))
+        self.app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.welcome.auto_welcome))
         
         # آمار
-        self.dispatcher.add_handler(CommandHandler("stats", self.stats.show_stats))
-        self.dispatcher.add_handler(CommandHandler("info", self.stats.user_info))
+        self.app.add_handler(CommandHandler("stats", self.stats.show_stats))
+        self.app.add_handler(CommandHandler("info", self.stats.user_info))
         
         # بازی‌ها
-        self.dispatcher.add_handler(CommandHandler("dice", self.games.dice_game))
-        self.dispatcher.add_handler(CommandHandler("dart", self.games.dart_game))
-        self.dispatcher.add_handler(CommandHandler("football", self.games.football_game))
-        self.dispatcher.add_handler(CommandHandler("basketball", self.games.basketball_game))
-        self.dispatcher.add_handler(CommandHandler("bowling", self.games.bowling_game))
-        self.dispatcher.add_handler(CommandHandler("slot", self.games.slot_game))
-        self.dispatcher.add_handler(CommandHandler("aim", self.games.aim_game))
+        self.app.add_handler(CommandHandler("dice", self.games.dice_game))
+        self.app.add_handler(CommandHandler("dart", self.games.dart_game))
+        self.app.add_handler(CommandHandler("football", self.games.football_game))
+        self.app.add_handler(CommandHandler("basketball", self.games.basketball_game))
+        self.app.add_handler(CommandHandler("bowling", self.games.bowling_game))
+        self.app.add_handler(CommandHandler("slot", self.games.slot_game))
+        self.app.add_handler(CommandHandler("aim", self.games.aim_game))
         
         # تبدیل
-        self.dispatcher.add_handler(CommandHandler("tosticker", self.convert.to_sticker))
-        self.dispatcher.add_handler(CommandHandler("togif", self.convert.to_gif))
+        self.app.add_handler(CommandHandler("tosticker", self.convert.to_sticker))
+        self.app.add_handler(CommandHandler("togif", self.convert.to_gif))
         
         # نقل قول و تاریخ
-        self.dispatcher.add_handler(CommandHandler("quote", self.quotes.quote_message))
-        self.dispatcher.add_handler(CommandHandler("date", self.date.show_date))
+        self.app.add_handler(CommandHandler("quote", self.quotes.quote_message))
+        self.app.add_handler(CommandHandler("date", self.date.show_date))
         
         # امتیاز
-        self.dispatcher.add_handler(CommandHandler("score", self.rewards.show_score))
-        self.dispatcher.add_handler(CommandHandler("enablescore", self.rewards.enable_score))
-        self.dispatcher.add_handler(CommandHandler("disablescore", self.rewards.disable_score))
+        self.app.add_handler(CommandHandler("score", self.rewards.show_score))
+        self.app.add_handler(CommandHandler("enablescore", self.rewards.enable_score))
+        self.app.add_handler(CommandHandler("disablescore", self.rewards.disable_score))
         
         # اشتراک
-        self.dispatcher.add_handler(CommandHandler("charge", self.subscription.charge_group))
-        self.dispatcher.add_handler(CommandHandler("status", self.subscription.group_status))
+        self.app.add_handler(CommandHandler("charge", self.subscription.charge_group))
+        self.app.add_handler(CommandHandler("status", self.subscription.group_status))
         
         # لیست‌ها
-        self.dispatcher.add_handler(CommandHandler("ownerslist", self.admin.list_owners))
-        self.dispatcher.add_handler(CommandHandler("adminslist", self.admin.list_admins))
-        self.dispatcher.add_handler(CommandHandler("vipslist", self.admin.list_vips))
-        self.dispatcher.add_handler(CommandHandler("muteslist", self.admin.list_mutes))
-        self.dispatcher.add_handler(CommandHandler("banslist", self.admin.list_bans))
+        self.app.add_handler(CommandHandler("ownerslist", self.admin.list_owners))
+        self.app.add_handler(CommandHandler("adminslist", self.admin.list_admins))
+        self.app.add_handler(CommandHandler("vipslist", self.admin.list_vips))
+        self.app.add_handler(CommandHandler("muteslist", self.admin.list_mutes))
+        self.app.add_handler(CommandHandler("banslist", self.admin.list_bans))
         
         # پنل شیشه‌ای
-        self.dispatcher.add_handler(CommandHandler("settings", self.settings_panel))
-        self.dispatcher.add_handler(CallbackQueryHandler(self.button_handler))
+        self.app.add_handler(CommandHandler("settings", self.settings_panel))
+        self.app.add_handler(CallbackQueryHandler(self.button_handler))
         
         # هندلر پیام‌ها
-        self.dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, self.message_handler))
+        self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.message_handler))
     
-    def settings_panel(self, update: Update, context: CallbackContext):
-        if not is_admin(update, context):
+    async def settings_panel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await is_admin(update, context):
             return
         keyboard = [
             [InlineKeyboardButton("👥 مدیریت", callback_data="menu_manage")],
@@ -135,34 +156,33 @@ class VoidBot:
             [InlineKeyboardButton("⚙️ تنظیمات", callback_data="menu_settings")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        update.message.reply_text("🛠 پنل مدیریت گروه", reply_markup=reply_markup)
+        await update.message.reply_text("🛠 پنل مدیریت گروه", reply_markup=reply_markup)
     
-    def button_handler(self, update: Update, context: CallbackContext):
+    async def button_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         query = update.callback_query
-        query.answer()
+        await query.answer()
         data = query.data
         
         if data == "menu_manage":
-            self.promote.manage_panel(query)
+            await self.promote.manage_panel(query)
         elif data == "menu_locks":
-            self.locks.locks_panel(query)
+            await self.locks.locks_panel(query)
         elif data == "menu_stats":
-            self.stats.stats_panel(query)
+            await self.stats.stats_panel(query)
         elif data == "menu_settings":
-            self.welcome.settings_panel(query)
+            await self.welcome.settings_panel(query)
     
-    def message_handler(self, update: Update, context: CallbackContext):
-        if self.locks.is_group_locked(update):
-            update.message.delete()
+    async def message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if await self.locks.is_group_locked(update):
+            await update.message.delete()
             return
-        if self.filters.check_filters(update.message.text):
-            update.message.delete()
-            update.message.reply_text("⚠️ پیام شما حاوی کلمه ممنوعه بود!")
+        if await self.filters.check_filters(update.message.text):
+            await update.message.delete()
+            await update.message.reply_text("⚠️ پیام شما حاوی کلمه ممنوعه بود!")
     
     def run(self):
         logger.info("🚀 ربات void راه‌اندازی شد!")
-        self.updater.start_polling()
-        self.updater.idle()
+        self.app.run_polling()
 
 if __name__ == "__main__":
     bot = VoidBot()
